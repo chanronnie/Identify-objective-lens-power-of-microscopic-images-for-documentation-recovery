@@ -114,6 +114,7 @@ class MedicalImagesDataset(Dataset):
 # end of MedicalImagesDataset
 
 
+
 # ===========================
 # class: MedicalImagesDataset
 # ===========================
@@ -312,3 +313,200 @@ class MedicalImages():
 
     return train_transformer, standard_transformer
 # end of MedicalImages
+
+
+
+# ===========================
+# class: Viz
+# ===========================
+
+class Viz:
+  """This class contains the methods for plotting."""
+
+  @staticmethod
+  def plot_class_balance(df, title, ax=None):
+    """
+    Plots the class distribution for the given set.
+
+    Arguments:
+    ----------
+    df: polars.DataFrame
+      The dataset to be plotted.
+    title: String
+      The title of the plot.
+
+    Returns:
+    -------
+    None
+    """
+
+    if ax is None:
+      ax = plt.gca()
+    label_map = {0: '100x', 1: '200x', 2: '400x', 3: '40x'}
+    magnification_classes = df.group_by("label").len(name="count").sort("count", descending=True).to_pandas()
+    magnification_classes['label'] = magnification_classes['label'].map(label_map)
+
+    sns.barplot(data=magnification_classes, x="label", y="count", ax=ax)
+    ax.set_title(title)
+    ax.set_xlabel("Objective Lense")
+    ax.set_ylabel("Count")
+    ax.grid(alpha=0.3)
+
+
+  @staticmethod
+  def get_trial_records(db, trial):
+    """
+    Retrieves the attributes from the Optuna study database for a given trial.
+
+    Arguments:
+    ----------
+    db: pandas.DataFrame
+      The Optuna study database
+    trial: int
+      Trial to retrieve
+
+    Returns:
+    -------- 
+    train_losses: list
+      The training loss history for the given trial
+    valid_losses: list
+      The validation loss history for the given trial 
+    lr: float
+      The learning rate for the given trial
+    layers: int
+      The number of layers for the given trial
+    accuracy: float
+      The validation accuracy for the given trial
+    """
+    trial_record = db[db['number'] == trial]
+    train_losses = trial_record['user_attrs_train_loss_history'].iloc[0]
+    valid_losses = trial_record['user_attrs_valid_loss_history'].iloc[0]
+    lr = trial_record['params_lr'].iloc[0]
+    layers = trial_record['params_n_layers'].iloc[0]
+    accuracy = trial_record['user_attrs_valid_accuracy'].iloc[0]
+
+    return train_losses, valid_losses, lr, layers, accuracy
+
+
+  @staticmethod
+  def plot_learning_curves(train_losses, valid_losses, title, ax=None, show_epochs=True):
+    """
+    Plots the training and validation losses (learning curves) with a given title.
+
+    Arguments
+    ---------
+    train_losses: list
+      The training loss history
+    valid_losses: list
+      The validation loss history
+    title: str
+      The title of the plot
+    ax: matplotlib.axes.Axes
+      The axis to plot on
+    
+    Returns
+    ------- 
+    None
+    """
+
+    # Plot the training and validation losses
+    epochs = np.arange(len(train_losses))
+    ax.plot(epochs, train_losses, '-s', label='Train loss')
+    ax.plot(epochs, valid_losses, '-s', label='Validation loss')
+
+    if show_epochs == True:
+      ax.set_xticks(epochs)
+
+    # Customize labels and title
+    ax.set_xlabel('Epochs')
+    ax.set_ylabel('Losses')
+    ax.set_title(title)
+    ax.grid(alpha=0.3)
+    ax.legend()
+  
+
+  @staticmethod
+  def plot_confusion_matrix(conf_matrix, color, title, ax):
+    """
+    Plots a confusion matrix.
+
+    Arguments:
+    ----------
+    conf_matrix: numpy.ndarray
+      The confusion matrix to be plotted.
+    color: str
+      The color of the confusion matrix.
+    title: str
+      The title of the confusion matrix.
+    
+    Returns:
+    --------
+    None
+    """
+
+    class_names = ['100x', '200x', '400x', '40x']
+    sns.heatmap(conf_matrix, 
+                annot=True, 
+                fmt='d', 
+                cmap=color, ax=ax,
+                xticklabels=class_names, 
+                yticklabels=class_names)
+    ax.set_title(title)
+    ax.set_ylabel("Actual Magnification")
+    ax.set_xlabel("Predicted Magnification")
+  
+  
+  @staticmethod
+  def plot_predictions(images, true_labels, pred_labels_conv2d, pred_labels_resnet18):
+    """
+    Plots 10 images with their true and predicted labels for both Conv2d and ResNet-18 on a grid (2x5)
+
+    Arguments:
+    ----------
+    images: torch.Tensor
+      A batch of images.
+    true_labels: torch.Tensor
+      The true labels for the images.
+    pred_labels_conv2d: torch.Tensor
+      The predicted labels for the images using the Conv2d model.
+    pred_labels_resnet18: torch.Tensor
+      The predicted labels for the images using the ResNet-18 model.
+    
+    Returns:
+    --------
+    None
+    """
+
+    # Define the grid
+    fig, ax = plt.subplots(2, 5, figsize=(12, 5))
+    ax_flatten = ax.flatten() 
+
+    # Set title and the class names
+    fig.suptitle(f"Magnification Classification: Conv2d vs ResNet-18", 
+                  fontsize=16, fontweight='bold')  
+    class_names = ["100x", "200x", "400x", "40x"]
+
+    for i in range(len(images)):
+
+        # Get the true and predicted labels
+        true_label = class_names[true_labels[i]]
+        pred_label_conv2d = class_names[pred_labels_conv2d[i]]
+        pred_label_resnet18 = class_names[pred_labels_resnet18[i]]
+              
+        # Prepare image for plotting
+        pixels = images[i].cpu().numpy()                        # Convert to Numpy array for plotting
+        img = pixels.transpose((1, 2, 0))                       # Convert (C, H, W) Tensor to (H, W, C) for Matplotlib
+        norm_img = (img - img.min()) / (img.max() - img.min())  # Normalize image to [0, 1] for correct image display
+        
+        # Plot image in the axis with its true and predicted labels
+        ax_flatten[i].imshow(norm_img)
+        ax_flatten[i].set_title(f"True Label: {true_label}\n"
+                                f"Predicted (Conv2D): {pred_label_conv2d}\n"
+                                f"Predicted (Resnet18): {pred_label_resnet18}", 
+                                fontsize=10)
+        ax_flatten[i].axis('off')
+              
+    plt.tight_layout()
+    plt.show()
+
+# end of Viz class
