@@ -145,7 +145,7 @@ class MedicalImages():
     raw_data = load_from_disk(data_path)
 
     # 2. Convert to a Polars DataFrame via the Arrow Table
-    raw_df = pl.from_arrow(raw_data.data.table)
+    raw_df = pl.from_arrow(raw_data["train"].data.table)
 
     # 3. Unnest the polar DataFrame
     self.df = (
