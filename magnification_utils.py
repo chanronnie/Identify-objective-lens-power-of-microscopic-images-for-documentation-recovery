@@ -18,22 +18,11 @@ from PIL import Image
 import pandas as pd
 import polars as pl
 import io
-import gc
-import os
-import json
-import time
-from pathlib import Path
 
 # For training CNN models
 from datasets import load_from_disk
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix, classification_report
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
 import torchvision.transforms as T
-from torchvision import models      # for Resnet-18
 from torch.utils.data import Dataset, DataLoader
 
 
@@ -44,8 +33,17 @@ from torch.utils.data import Dataset, DataLoader
 class MedicalImagesDataset(Dataset):
   """
   This class creates a custom PyTorch Dataset class for the BreaKHis histopathology dataset.
+
+  Example
+  -------
+  >>> transform = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor()])
+  >>> dataset = MedicalImagesDataset(df=my_df, transform=transform)
+  >>> img, label = dataset[0]
+  >>> print(img.shape)
+  torch.Size([3, 224, 224])
   
   ACKNOWLEDGMENT
+  --------------
   Code adapted from https://docs.pytorch.org/tutorials/beginner/basics/data_tutorial.html with changes.
   Modifications were made to support the BreaKHis dataset.
   """
@@ -120,7 +118,16 @@ class MedicalImagesDataset(Dataset):
 # ===========================
 
 class MedicalImages():
-  """This class handles BreaKHis dataset preprocessing"""
+  """
+  Utility class for preprocessing BreaKHis dataset
+  
+  Example
+  -------
+  >>> in_path = 'data_name'
+  >>> mi = MedicalImages()
+  >>> df = mi.load_data(in_path)
+  >>> print(df.head())
+  """
 
   def __init__(self):
     """Initializes the dataset instance with specific data."""
@@ -312,6 +319,7 @@ class MedicalImages():
         T.Normalize(mean=default_mean, std=default_std)])
 
     return train_transformer, standard_transformer
+  
 # end of MedicalImages
 
 
@@ -321,7 +329,17 @@ class MedicalImages():
 # ===========================
 
 class Viz:
-  """This class contains the methods for plotting."""
+  """
+  Utility class for generating visualizations.
+  
+  Example:
+  -------
+  >>> import matplotlib.pyplot as plt
+  >>> fig, ax = plt.subplots(1, 2, figsize=(10, 3))
+  >>> Viz.plot_class_balance(train_df, "Training Set", ax=ax[0])
+  >>> Viz.plot_class_balance(val_df, "Validation Set", ax=ax[1])
+  >>> plt.show()
+  """
 
   @staticmethod
   def plot_class_balance(df, title, ax=None):
