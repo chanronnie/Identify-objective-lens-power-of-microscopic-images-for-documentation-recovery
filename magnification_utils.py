@@ -429,8 +429,8 @@ class Viz:
 
     # Plot the training and validation losses
     epochs = np.arange(len(train_losses))
-    ax.plot(epochs, train_losses, '-s', label='Train loss')
-    ax.plot(epochs, valid_losses, '-s', label='Validation loss')
+    ax.plot(epochs, train_losses, '-o', markersize=2, label='Train loss')
+    ax.plot(epochs, valid_losses, '-o', markersize=2, label='Validation loss')
 
     if show_epochs == True:
       ax.set_xticks(epochs)
